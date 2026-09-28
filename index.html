@@ -178,7 +178,7 @@
                 <div style="flex: 2; min-width: 220px;">
                     <label>Grupo Actual:</label>
                     <select id="selectGrupoActivo" onchange="cambiarGrupoActivo()">
-                        <option value="">Cargando listas desde Netlify...</option>
+                        <option value="">Cargando listas desde el servidor...</option>
                     </select>
                 </div>
                 <div style="flex: 1; min-width: 160px;">
@@ -325,6 +325,8 @@
             document.getElementById('fechaClase').value = new Date().toISOString().split('T')[0];
             document.getElementById('selectPeriodoActivo').value = periodoActivoKey;
 
+            localStorage.removeItem('sia_grupos_db');
+
             cargarDocentesExcelNetlify();
             cargarArchivosExcelNetlify();
 
@@ -458,7 +460,6 @@
             return selectAsig.value;
         }
 
-        // PARSEO AVANZADO DEL HISTORIAL COMPLETO DE DRIVE
         window.procesarRespuestaDrive = function(data) {
             if (data && data.status === "SUCCESS") {
                 let gruposDrive = data.grupos || {};
@@ -478,7 +479,6 @@
                             gruposDB[claveLimpia].estudiantes = listaEstudiantes;
                         }
 
-                        // Reconstruir la matriz de historial de clases si viene de Drive
                         if (datosGrupo.historial) {
                             gruposDB[claveLimpia].periodos = datosGrupo.historial;
                         }
@@ -615,7 +615,6 @@
             reader.readAsArrayBuffer(file);
         }
 
-        // CÁLCULO EXACTO Y ACUMULADO DE FALLAS
         function calcularFallasAcumuladas(estudiante) {
             let totalHorasFalla = 0;
             const claveLimpia = normalizarNombreGrupo(grupoActivoKey);
@@ -744,6 +743,7 @@
             });
         }
 
+        // ENVÍO DE DATOS ROBUSTO VÍA URLSEARCHPARAMS Y FETCH
         function enviarADrive(curso, fecha, asignatura, docenteNombre, registros, callback) {
             const paquete = {
                 curso: curso,
@@ -754,35 +754,24 @@
                 registros: registros
             };
 
-            let iframeName = 'iframe_drive_' + new Date().getTime();
-            let iframe = document.createElement('iframe');
-            iframe.name = iframeName;
-            iframe.style.display = 'none';
-            document.body.appendChild(iframe);
+            const params = new URLSearchParams();
+            params.append('payload', JSON.stringify(paquete));
 
-            let form = document.createElement('form');
-            form.method = 'POST';
-            form.action = URL_SCRIPT_INSTITUCIONAL;
-            form.target = iframeName;
-
-            let inputPayload = document.createElement('input');
-            inputPayload.type = 'hidden';
-            inputPayload.name = 'payload';
-            inputPayload.value = JSON.stringify(paquete);
-
-            form.appendChild(inputPayload);
-            document.body.appendChild(form);
-
-            form.submit();
-
-            setTimeout(() => {
-                document.body.removeChild(form);
-                document.body.removeChild(iframe);
+            fetch(URL_SCRIPT_INSTITUCIONAL, {
+                method: 'POST',
+                mode: 'no-cors',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded'
+                },
+                body: params.toString()
+            }).then(() => {
                 if (callback) callback();
-            }, 1500);
+            }).catch(err => {
+                console.error("Error enviando a Drive:", err);
+                if (callback) callback();
+            });
         }
 
-        // EXPORTACIÓN A EXCEL COMPLETA Y DETALLADA
         function exportarMatrizConsolidadaExcel() {
             const claveLimpia = normalizarNombreGrupo(grupoActivoKey);
             if (!claveLimpia || !gruposDB[claveLimpia]) {
