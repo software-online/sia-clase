@@ -1,0 +1,841 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SIA-CLASE — Control Institucional de Asistencia Escolar</title>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <style>
+        :root {
+            --primary: #1e3a8a;
+            --primary-dark: #0f172a;
+            --accent: #eab308;
+            --bg-body: #f8fafc;
+            --card-bg: #ffffff;
+            --text-main: #1e293b;
+            --border-color: #cbd5e1;
+        }
+
+        body { 
+            font-family: Arial, sans-serif; 
+            background-color: var(--bg-body); 
+            margin: 0; 
+            padding: 0; 
+            color: var(--text-main); 
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+
+        #modalLogin {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(15, 23, 42, 0.85);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+        }
+
+        .login-card {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+            max-width: 380px;
+            width: 90%;
+            text-align: center;
+        }
+
+        .login-card h2 { color: var(--primary); margin-top: 10px; }
+        
+        .login-card input[type="password"] { 
+            padding: 12px; 
+            font-size: 18px; 
+            margin-bottom: 20px; 
+            text-align: center; 
+            letter-spacing: 2px; 
+            width: 100%; 
+            box-sizing: border-box; 
+            font-weight: bold; 
+            border: 2px solid var(--border-color);
+            border-radius: 6px;
+        }
+
+        .btn-login {
+            background: var(--primary); color: white; border: none; padding: 12px; width: 100%;
+            font-size: 16px; font-weight: bold; border-radius: 6px; cursor: pointer;
+        }
+
+        header { 
+            background-color: var(--primary); 
+            color: white; 
+            padding: 12px 30px; 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            border-bottom: 4px solid var(--accent); 
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .header-brand { display: flex; align-items: center; gap: 15px; }
+        .logo-img { 
+            height: 55px; 
+            width: auto; 
+            background: white; 
+            padding: 4px 8px; 
+            border-radius: 8px; 
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            object-fit: contain;
+        }
+        .header-title { font-size: 18px; font-weight: bold; }
+        .header-subtitle { font-size: 12px; color: #93c5fd; }
+
+        .header-buttons { display: flex; gap: 10px; align-items: center; }
+
+        .btn-sync { background-color: #0284c7; color: white; border: none; padding: 10px 16px; font-weight: bold; border-radius: 5px; cursor: pointer; }
+        .btn-excel { background-color: #16a34a; color: white; border: none; padding: 10px 16px; font-weight: bold; border-radius: 5px; cursor: pointer; }
+        .btn-logout { background-color: #e11d48; color: white; border: none; padding: 10px 16px; font-weight: bold; border-radius: 5px; cursor: pointer; }
+
+        .container { max-width: 1250px; margin: 20px auto; padding: 0 20px; display: flex; flex-direction: column; gap: 20px; width: 100%; box-sizing: border-box; }
+        .card { background: var(--card-bg); padding: 20px; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.08); border: 1px solid #e2e8f0; }
+
+        .group-selector-card { background: #e0f2fe; border: 1px solid #7dd3fc; }
+        .upload-section { background: #eff6ff; border: 2px dashed #3b82f6; text-align: center; padding: 15px; border-radius: 8px; }
+        .controls-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-top: 10px; }
+
+        label { display: block; font-size: 12px; font-weight: bold; margin-bottom: 4px; }
+        input, select, textarea { width: 100%; padding: 8px; border: 1px solid var(--border-color); border-radius: 4px; box-sizing: border-box; font-size: 13px; }
+
+        .table-container { overflow-x: auto; margin-top: 15px; }
+        table { width: 100%; border-collapse: collapse; font-size: 12px; }
+        th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid #e2e8f0; }
+        th { background-color: #f8fafc; color: #475569; font-weight: bold; }
+
+        .status-options { display: flex; gap: 12px; align-items: center; }
+        .status-options label { font-weight: normal; cursor: pointer; display: flex; align-items: center; gap: 3px; }
+
+        .badge-alerta { padding: 3px 6px; border-radius: 4px; font-size: 10px; font-weight: bold; }
+        .badge-ok { background-color: #dcfce7; color: #166534; }
+        .badge-riesgo { background-color: #fef3c7; color: #92400e; }
+        .badge-perdida { background-color: #fee2e2; color: #991b1b; }
+
+        .btn-save { background-color: var(--primary); color: white; border: none; padding: 12px 24px; font-size: 14px; font-weight: bold; border-radius: 6px; cursor: pointer; margin-top: 15px; width: 100%; }
+        .btn-save:hover { background-color: #1e40af; }
+
+        footer { 
+            background-color: var(--primary-dark); 
+            color: #94a3b8; 
+            text-align: center; 
+            padding: 18px 20px; 
+            font-size: 13px; 
+            margin-top: auto; 
+            border-top: 3px solid var(--primary); 
+            line-height: 1.5;
+        }
+        footer strong { color: #f1f5f9; }
+    </style>
+</head>
+<body>
+
+    <div id="modalLogin">
+        <div class="login-card">
+            <img src="logo.png" alt="SIAO" style="height: 60px; width: auto; margin-bottom: 10px;" onerror="this.style.display='none'">
+            <h2>🔐 SIA-CLASE</h2>
+            <p style="font-size: 13px; color: #64748b; margin-bottom: 15px;">
+                Ingrese su PIN Personal de Acceso Institucional:
+            </p>
+            
+            <input type="password" id="inputPinPersonal" placeholder="Ingrese PIN aquí" onkeyup="if(event.key==='Enter') validarPinAcceso()">
+
+            <button class="btn-login" onclick="validarPinAcceso()">Ingresar a la Plataforma</button>
+            <p id="msgErrorLogin" style="color: #dc2626; font-size: 12px; margin-top: 10px; display: none;">PIN no reconocido. Verifique e intente de nuevo.</p>
+        </div>
+    </div>
+
+    <header>
+        <div class="header-brand">
+            <img src="logo.png" alt="Logo SIAO" class="logo-img" onerror="this.src='logo SIAO.png';">
+            <div>
+                <div class="header-title">SIA-CLASE — Control Institucional de Asistencia</div>
+                <div class="header-subtitle">Docente Activo: <strong style="color:#eab308;" id="lblNombreUsuario">No identificado</strong></div>
+            </div>
+        </div>
+        <div class="header-buttons">
+            <button class="btn-sync" onclick="descargarGruposDesdeDrive()">🔄 Sincronizar Drive</button>
+            <button class="btn-excel" onclick="exportarMatrizConsolidadaExcel()">📊 Exportar Excel Local</button>
+            <button class="btn-logout" onclick="cerrarSesion()">🔒 Salir</button>
+        </div>
+    </header>
+
+    <div class="container">
+
+        <div class="card group-selector-card">
+            <h3 style="margin:0 0 10px 0; color: #0369a1;">1. Seleccionar Grupo y Periodo Académico</h3>
+            <div style="display: flex; gap: 15px; align-items: flex-end; flex-wrap: wrap;">
+                <div style="flex: 2; min-width: 220px;">
+                    <label>Grupo Actual:</label>
+                    <select id="selectGrupoActivo" onchange="cambiarGrupoActivo()">
+                        <option value="">Cargando listas desde Netlify...</option>
+                    </select>
+                </div>
+                <div style="flex: 1; min-width: 160px;">
+                    <label>Periodo Académico:</label>
+                    <select id="selectPeriodoActivo" onchange="cambiarPeriodoActivo()">
+                        <option value="Periodo 1" selected>Periodo 1</option>
+                        <option value="Periodo 2">Periodo 2</option>
+                        <option value="Periodo 3">Periodo 3</option>
+                        <option value="Periodo 4">Periodo 4</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <div class="card upload-section">
+            <h3 style="margin:0 0 5px 0; color: #1e3a8a;">2. Cargar Nueva Lista Oficial (Excel Adicional)</h3>
+            <p style="font-size: 12px; color: #475569; margin-bottom: 10px;">
+                Si requiere ingresar un curso nuevo que no esté en la lista, suba el archivo aquí:
+            </p>
+            <div style="display:flex; justify-content:center; gap:10px; flex-wrap:wrap; align-items:center;">
+                <input type="text" id="inputNombreNuevoGrupo" placeholder="Ej: 12-1" style="max-width: 280px;">
+                <input type="file" id="excelFileInput" accept=".xlsx, .xls" onchange="cargarListaExcelManual(event)" style="max-width: 300px;">
+            </div>
+        </div>
+
+        <div class="card">
+            <h3 style="margin-top:0; color: #1e3a8a;">3. Datos de la Clase del Día</h3>
+            <div class="controls-grid">
+                <div>
+                    <label>Docente Responsable Identificado:</label>
+                    <input type="text" id="txtDocenteActivo" readonly style="background-color:#f1f5f9; font-weight:bold; color:#1e3a8a;">
+                </div>
+                <div>
+                    <label>Asignatura / Materia del Docente</label>
+                    <select id="selectAsignatura" onchange="evaluarOtraAsignatura()">
+                        <option value="Matemáticas" selected>📐 Matemáticas</option>
+                        <option value="Español">📖 Español / Lengua Castellana</option>
+                        <option value="Ciencias Naturales">🔬 Ciencias Naturales</option>
+                        <option value="Ciencias Sociales">🌍 Ciencias Sociales</option>
+                        <option value="Inglés">🇬🇧 Inglés</option>
+                        <option value="Educación Física">⚽ Educación Física</option>
+                        <option value="Artística">🎨 Artística</option>
+                        <option value="Informática / Tecnología">💻 Informática / Tecnología</option>
+                        <option value="Ética y Valores">🕊️ Ética y Valores</option>
+                        <option value="OTRA">-- Otra Asignatura --</option>
+                    </select>
+                    <input type="text" id="inputOtraAsignatura" placeholder="Escriba el nombre de la materia" style="display:none; margin-top:5px;">
+                </div>
+                <div>
+                    <label>Fecha de la Clase</label>
+                    <input type="date" id="fechaClase" onchange="renderizarTablaAsistencia()">
+                </div>
+                <div>
+                    <label>Horas de esta Clase</label>
+                    <input type="number" id="horasClase" value="2" min="1" max="8">
+                </div>
+                <div>
+                    <label>Horas Totales del Periodo</label>
+                    <input type="number" id="horasTotales" value="20" min="1" onchange="renderizarTablaAsistencia()">
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+                <h3 style="margin:0; color: #1e3a8a;" id="tituloListaGrupo">Lista del Grupo</h3>
+                <span id="contadorEstudiantes" style="font-weight:bold; font-size:12px; color:#64748b;">0 Estudiantes</span>
+            </div>
+
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Estudiante</th>
+                            <th>Asistencia Hoy</th>
+                            <th>Fallas Acum. (Periodo)</th>
+                            <th>% Pérdida</th>
+                            <th>Estado Alerta</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tablaAsistencia">
+                        <tr>
+                            <td colspan="6" style="text-align:center; color:#94a3b8; padding:20px;">
+                                Ingrese su PIN de acceso institucional para desbloquear el sistema.
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <button class="btn-save" onclick="guardarSesionAsistencia()">💾 Guardar Asistencia y Sincronizar con Coordinación</button>
+        </div>
+
+    </div>
+
+    <footer>
+        © 2026 · Desarrollado por <strong>Ing. Jaminton Asprilla A.</strong> · <em>Tecnología que transforma ideas en soluciones.</em>
+    </footer>
+
+    <script>
+        const CLAVE_ADMIN = "admin2026*";
+
+        const ARCHIVOS_EXCEL_NETLIFY = [
+            { nombre: "Transición", archivo: "Transicion.xlsx" },
+            { nombre: "7-1", archivo: "7-1.xlsx" },
+            { nombre: "7-2", archivo: "7-2.xlsx" },
+            { nombre: "7-3", archivo: "7-3.xlsx" },
+            { nombre: "7-4", archivo: "7-4.xlsx" },
+            { nombre: "8-1", archivo: "8-1.xlsx" },
+            { nombre: "8-2", archivo: "8-2.xlsx" },
+            { nombre: "8-3", archivo: "8-3.xlsx" },
+            { nombre: "8-4", archivo: "8-4.xlsx" },
+            { nombre: "9-1", archivo: "9-1.xlsx" },
+            { nombre: "9-2", archivo: "9-2.xlsx" },
+            { nombre: "9-3", archivo: "9-3.xlsx" },
+            { nombre: "9-4", archivo: "9-4.xlsx" },
+            { nombre: "10-1", archivo: "10-1.xlsx" },
+            { nombre: "10-2", archivo: "10-2.xlsx" },
+            { nombre: "10-3", archivo: "10-3.xlsx" },
+            { nombre: "11-1", archivo: "11-1.xlsx" },
+            { nombre: "11-2", archivo: "11-2.xlsx" },
+            { nombre: "11-3", archivo: "11-3.xlsx" }
+        ];
+
+        const URL_SCRIPT_INSTITUCIONAL = "https://script.google.com/macros/s/AKfycbxQdHrE1EbLMZcuYGnXgTb6eQMCbUytbZ8eepxzRyseqtq5dMPTnL7mDWoSakwtIAt0/exec";
+
+        let usuarioActual = sessionStorage.getItem('sia_usuario_activo') || '';
+        let gruposDB = {};
+        let mapaDocentesPins = {};
+        let grupoActivoKey = localStorage.getItem('sia_grupo_activo_key') || '';
+        let periodoActivoKey = localStorage.getItem('sia_periodo_activo_key') || 'Periodo 1';
+
+        function normalizarNombreGrupo(nombre) {
+            if (!nombre) return "";
+            let num = nombre.trim();
+            if (num.toLowerCase().startsWith("curso ")) {
+                num = num.substring(6).trim();
+            }
+            return num;
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('fechaClase').value = new Date().toISOString().split('T')[0];
+            document.getElementById('selectPeriodoActivo').value = periodoActivoKey;
+
+            cargarDocentesExcelNetlify();
+            cargarArchivosExcelNetlify();
+
+            if (usuarioActual) {
+                desbloquearPlataforma();
+            }
+
+            descargarGruposDesdeDrive();
+        });
+
+        function cargarDocentesExcelNetlify() {
+            let intentarCarga = (nombreArchivo) => {
+                fetch(nombreArchivo)
+                    .then(res => res.arrayBuffer())
+                    .then(buffer => {
+                        const data = new Uint8Array(buffer);
+                        const workbook = XLSX.read(data, { type: 'array' });
+                        const sheet = workbook.Sheets[workbook.SheetNames[0]];
+                        const jsonRows = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+                        
+                        mapaDocentesPins = {};
+                        jsonRows.forEach((row, idx) => {
+                            if (idx > 0 && row.length >= 2) {
+                                let pin = row[0] ? row[0].toString().trim() : '';
+                                let nombre = row[1] ? row[1].toString().trim() : '';
+                                if (pin && nombre) {
+                                    mapaDocentesPins[pin.toLowerCase()] = nombre;
+                                }
+                            }
+                        });
+                        localStorage.setItem('sia_pins_db', JSON.stringify(mapaDocentesPins));
+                    }).catch(e => {
+                        if (nombreArchivo.endsWith(".xlsx")) intentarCarga("Docentes.xls");
+                    });
+            };
+            intentarCarga("Docentes.xlsx");
+        }
+
+        function validarPinAcceso() {
+            const pinIngresado = document.getElementById('inputPinPersonal').value.trim();
+            const msgError = document.getElementById('msgErrorLogin');
+
+            if (pinIngresado === CLAVE_ADMIN) {
+                usuarioActual = "ADMINISTRADOR";
+                sessionStorage.setItem('sia_usuario_activo', usuarioActual);
+                msgError.style.display = 'none';
+                desbloquearPlataforma();
+                return;
+            }
+
+            let pinLimpio = pinIngresado.toLowerCase();
+            let docentesPinsLocal = JSON.parse(localStorage.getItem('sia_pins_db')) || mapaDocentesPins;
+            
+            if (docentesPinsLocal[pinLimpio]) {
+                usuarioActual = docentesPinsLocal[pinLimpio];
+                sessionStorage.setItem('sia_usuario_activo', usuarioActual);
+                msgError.style.display = 'none';
+                desbloquearPlataforma();
+            } else {
+                msgError.style.display = 'block';
+            }
+        }
+
+        function desbloquearPlataforma() {
+            document.getElementById('modalLogin').style.display = 'none';
+            document.getElementById('lblNombreUsuario').textContent = usuarioActual;
+            document.getElementById('txtDocenteActivo').value = usuarioActual;
+            renderizarTablaAsistencia();
+        }
+
+        function cargarArchivosExcelNetlify() {
+            ARCHIVOS_EXCEL_NETLIFY.forEach(item => {
+                let claveLimpia = normalizarNombreGrupo(item.nombre);
+                
+                fetch(item.archivo)
+                    .then(res => res.arrayBuffer())
+                    .then(buffer => {
+                        const data = new Uint8Array(buffer);
+                        const workbook = XLSX.read(data, { type: 'array' });
+                        const sheet = workbook.Sheets[workbook.SheetNames[0]];
+                        const jsonRows = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+                        
+                        let estudiantes = [];
+                        jsonRows.forEach(row => {
+                            row.forEach(cell => {
+                                if (cell && typeof cell === 'string' && cell.trim().length > 5) {
+                                    const texto = cell.trim();
+                                    if (!texto.toLowerCase().includes('nombre') && 
+                                        !texto.toLowerCase().includes('listado') && 
+                                        !texto.toLowerCase().includes('curso')) {
+                                        estudiantes.push(texto);
+                                    }
+                                }
+                            });
+                        });
+
+                        estudiantes = [...new Set(estudiantes)].sort();
+
+                        if (estudiantes.length > 0) {
+                            if (!gruposDB[claveLimpia]) {
+                                gruposDB[claveLimpia] = { 
+                                    estudiantes: estudiantes, 
+                                    periodos: { "Periodo 1": {}, "Periodo 2": {}, "Periodo 3": {}, "Periodo 4": {} } 
+                                };
+                            } else {
+                                gruposDB[claveLimpia].estudiantes = estudiantes;
+                            }
+                            actualizarSelectGrupos();
+                        }
+                    }).catch(e => console.log("Cargando desde servidor..."));
+            });
+        }
+
+        function cerrarSesion() {
+            sessionStorage.removeItem('sia_usuario_activo');
+            location.reload();
+        }
+
+        function evaluarOtraAsignatura() {
+            const selectAsig = document.getElementById('selectAsignatura');
+            const inputOtra = document.getElementById('inputOtraAsignatura');
+            inputOtra.style.display = (selectAsig.value === 'OTRA') ? 'block' : 'none';
+        }
+
+        function obtenerNombreAsignatura() {
+            const selectAsig = document.getElementById('selectAsignatura');
+            if (selectAsig.value === 'OTRA') {
+                const manual = document.getElementById('inputOtraAsignatura').value.trim();
+                return manual !== "" ? manual : "General";
+            }
+            return selectAsig.value;
+        }
+
+        // PARSEO AVANZADO DEL HISTORIAL COMPLETO DE DRIVE
+        window.procesarRespuestaDrive = function(data) {
+            if (data && data.status === "SUCCESS") {
+                let gruposDrive = data.grupos || {};
+
+                Object.keys(gruposDrive).forEach(key => {
+                    let claveLimpia = normalizarNombreGrupo(key);
+                    let datosGrupo = gruposDrive[key];
+                    let listaEstudiantes = Array.isArray(datosGrupo) ? datosGrupo : (datosGrupo.estudiantes || []);
+
+                    if (listaEstudiantes.length > 0) {
+                        if (!gruposDB[claveLimpia]) {
+                            gruposDB[claveLimpia] = { 
+                                estudiantes: listaEstudiantes, 
+                                periodos: { "Periodo 1": {}, "Periodo 2": {}, "Periodo 3": {}, "Periodo 4": {} } 
+                            };
+                        } else {
+                            gruposDB[claveLimpia].estudiantes = listaEstudiantes;
+                        }
+
+                        // Reconstruir la matriz de historial de clases si viene de Drive
+                        if (datosGrupo.historial) {
+                            gruposDB[claveLimpia].periodos = datosGrupo.historial;
+                        }
+                    }
+                });
+
+                localStorage.setItem('sia_grupos_db', JSON.stringify(gruposDB));
+                actualizarSelectGrupos();
+
+                if (usuarioActual) {
+                    renderizarTablaAsistencia();
+                }
+            }
+        };
+
+        function descargarGruposDesdeDrive() {
+            const scriptAntiguo = document.getElementById('jsonp_drive_script');
+            if (scriptAntiguo) {
+                document.body.removeChild(scriptAntiguo);
+            }
+
+            const script = document.createElement('script');
+            script.id = 'jsonp_drive_script';
+            script.src = URL_SCRIPT_INSTITUCIONAL + "?callback=procesarRespuestaDrive&t=" + new Date().getTime();
+            document.body.appendChild(script);
+        }
+
+        function actualizarSelectGrupos() {
+            const select = document.getElementById('selectGrupoActivo');
+            select.innerHTML = '';
+
+            const keys = Object.keys(gruposDB);
+            if (keys.length === 0) {
+                select.innerHTML = '<option value="">No hay grupos cargados aún</option>';
+                return;
+            }
+
+            keys.sort((a, b) => {
+                if (a.toLowerCase().includes("transici")) return -1;
+                if (b.toLowerCase().includes("transici")) return 1;
+                return a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' });
+            });
+
+            keys.forEach(key => {
+                const opt = document.createElement('option');
+                opt.value = key;
+                opt.textContent = `${key} (${gruposDB[key].estudiantes ? gruposDB[key].estudiantes.length : 0} estudiantes)`;
+                if (key === normalizarNombreGrupo(grupoActivoKey)) opt.selected = true;
+                select.appendChild(opt);
+            });
+
+            if (!grupoActivoKey || !gruposDB[normalizarNombreGrupo(grupoActivoKey)]) {
+                grupoActivoKey = keys[0];
+                localStorage.setItem('sia_grupo_activo_key', grupoActivoKey);
+            }
+            if (usuarioActual) renderizarTablaAsistencia();
+        }
+
+        function cambiarGrupoActivo() {
+            grupoActivoKey = document.getElementById('selectGrupoActivo').value;
+            localStorage.setItem('sia_grupo_activo_key', grupoActivoKey);
+            renderizarTablaAsistencia();
+        }
+
+        function cambiarPeriodoActivo() {
+            periodoActivoKey = document.getElementById('selectPeriodoActivo').value;
+            localStorage.setItem('sia_periodo_activo_key', periodoActivoKey);
+            renderizarTablaAsistencia();
+        }
+
+        function cargarListaExcelManual(e) {
+            let nombreIngresado = document.getElementById('inputNombreNuevoGrupo').value.trim();
+            const nombreGrupo = normalizarNombreGrupo(nombreIngresado);
+
+            if (!nombreGrupo) {
+                alert('Por favor ingrese el nombre del grupo (ej: "12-1") antes de seleccionar el Excel.');
+                e.target.value = '';
+                return;
+            }
+
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(evt) {
+                const data = new Uint8Array(evt.target.result);
+                const workbook = XLSX.read(data, { type: 'array' });
+                const sheet = workbook.Sheets[workbook.SheetNames[0]];
+                const jsonRows = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+                
+                let estudiantes = [];
+                jsonRows.forEach(row => {
+                    row.forEach(cell => {
+                        if (cell && typeof cell === 'string' && cell.trim().length > 5) {
+                            const texto = cell.trim();
+                            if (!texto.toLowerCase().includes('nombre') && 
+                                !texto.toLowerCase().includes('listado') && 
+                                !texto.toLowerCase().includes('curso')) {
+                                estudiantes.push(texto);
+                            }
+                        }
+                    });
+                });
+
+                estudiantes = [...new Set(estudiantes)].sort();
+
+                if (estudiantes.length > 0) {
+                    if (!gruposDB[nombreGrupo]) {
+                        gruposDB[nombreGrupo] = { 
+                            estudiantes: estudiantes, 
+                            periodos: { "Periodo 1": {}, "Periodo 2": {}, "Periodo 3": {}, "Periodo 4": {} } 
+                        };
+                    } else {
+                        gruposDB[nombreGrupo].estudiantes = estudiantes;
+                    }
+
+                    grupoActivoKey = nombreGrupo;
+                    localStorage.setItem('sia_grupo_activo_key', grupoActivoKey);
+
+                    let paqueteInicial = estudiantes.map(e => ({ estudiante: e, estado: "Presente" }));
+
+                    enviarADrive(nombreGrupo, document.getElementById('fechaClase').value, "Registro Inicial", usuarioActual, paqueteInicial, function() {
+                        alert(`¡Éxito! El grupo "${nombreGrupo}" fue agregado.`);
+                        document.getElementById('inputNombreNuevoGrupo').value = '';
+                        e.target.value = '';
+                        actualizarSelectGrupos();
+                        renderizarTablaAsistencia();
+                    });
+
+                } else {
+                    alert('No se encontraron nombres válidos en el archivo Excel.');
+                }
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        // CÁLCULO EXACTO Y ACUMULADO DE FALLAS
+        function calcularFallasAcumuladas(estudiante) {
+            let totalHorasFalla = 0;
+            const claveLimpia = normalizarNombreGrupo(grupoActivoKey);
+            const grupoObj = gruposDB[claveLimpia];
+            if (!grupoObj || !grupoObj.periodos) return 0;
+
+            const matrizPeriodo = grupoObj.periodos[periodoActivoKey] || {};
+
+            Object.keys(matrizPeriodo).forEach(claveSesion => {
+                const registro = matrizPeriodo[claveSesion][estudiante];
+                if (registro) {
+                    let estLimpio = (typeof registro === 'object') ? registro.estado : registro;
+                    let hrsLimpia = (typeof registro === 'object') ? (registro.horas || 2) : 2;
+
+                    if (estLimpio === 'Falla' || estLimpio === 'F') {
+                        totalHorasFalla += Number(hrsLimpia);
+                    }
+                }
+            });
+            return totalHorasFalla;
+        }
+
+        function renderizarTablaAsistencia() {
+            const tbody = document.getElementById('tablaAsistencia');
+            const contador = document.getElementById('contadorEstudiantes');
+            const titulo = document.getElementById('tituloListaGrupo');
+            const horasTotalesPeriodo = parseFloat(document.getElementById('horasTotales').value) || 20;
+            const fechaActual = document.getElementById('fechaClase').value;
+
+            tbody.innerHTML = '';
+
+            const claveLimpia = normalizarNombreGrupo(grupoActivoKey);
+
+            if (!claveLimpia || !gruposDB[claveLimpia]) {
+                titulo.textContent = 'Lista del Grupo';
+                contador.textContent = '0 Estudiantes';
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:#94a3b8; padding:20px;">No hay ningún grupo seleccionado. Cargue un Excel o elija un grupo arriba.</td></tr>';
+                return;
+            }
+
+            const grupoData = gruposDB[claveLimpia];
+            const estudiantes = grupoData.estudiantes || [];
+            const matrizPeriodo = (grupoData.periodos ? grupoData.periodos[periodoActivoKey] : {}) || {};
+
+            titulo.textContent = `Grupo: ${claveLimpia} — [${periodoActivoKey}]`;
+            contador.textContent = `${estudiantes.length} Estudiantes`;
+
+            const asignaturaActual = obtenerNombreAsignatura();
+            const claveSesion = `${fechaActual}_${asignaturaActual}`;
+
+            estudiantes.forEach((estudiante, idx) => {
+                const fallasAcum = calcularFallasAcumuladas(estudiante);
+                const porcentaje = ((fallasAcum / horasTotalesPeriodo) * 100).toFixed(1);
+
+                let alertaHTML = '<span class="badge-alerta badge-ok">Normal</span>';
+                if (porcentaje >= 20) {
+                    alertaHTML = '<span class="badge-alerta badge-perdida">🚨 Perdió el Periodo</span>';
+                } else if (porcentaje >= 14) {
+                    alertaHTML = '<span class="badge-alerta badge-riesgo">⚠️ En Riesgo</span>';
+                }
+
+                let estadoPrevio = 'Presente';
+                if (matrizPeriodo[claveSesion] && matrizPeriodo[claveSesion][estudiante]) {
+                    let reg = matrizPeriodo[claveSesion][estudiante];
+                    estadoPrevio = (typeof reg === 'object') ? reg.estado : reg;
+                }
+
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${idx + 1}</td>
+                    <td style="font-weight:bold; color:#1e3a8a;">${estudiante}</td>
+                    <td>
+                        <div class="status-options">
+                            <label style="color:#166534;"><input type="radio" name="status_${idx}" value="Presente" ${estadoPrevio === 'Presente' ? 'checked' : ''}> P</label>
+                            <label style="color:#991b1b;"><input type="radio" name="status_${idx}" value="Falla" ${estadoPrevio === 'Falla' ? 'checked' : ''}> F</label>
+                            <label style="color:#92400e;"><input type="radio" name="status_${idx}" value="Justificada" ${estadoPrevio === 'Justificada' ? 'checked' : ''}> J</label>
+                        </div>
+                    </td>
+                    <td style="font-weight:bold; color:#d97706;">${fallasAcum} hrs</td>
+                    <td><strong>${porcentaje}%</strong></td>
+                    <td>${alertaHTML}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function guardarSesionAsistencia() {
+            const claveLimpia = normalizarNombreGrupo(grupoActivoKey);
+            if (!claveLimpia || !gruposDB[claveLimpia]) {
+                alert('Primero seleccione o cargue un grupo.');
+                return;
+            }
+
+            const fecha = document.getElementById('fechaClase').value;
+            const asignatura = obtenerNombreAsignatura();
+            const horas = parseInt(document.getElementById('horasClase').value) || 2;
+            const estudiantes = gruposDB[claveLimpia].estudiantes;
+
+            if (!gruposDB[claveLimpia].periodos) gruposDB[claveLimpia].periodos = {};
+            if (!gruposDB[claveLimpia].periodos[periodoActivoKey]) gruposDB[claveLimpia].periodos[periodoActivoKey] = {};
+            
+            const claveSesion = `${fecha}_${asignatura}`;
+            if (!gruposDB[claveLimpia].periodos[periodoActivoKey][claveSesion]) {
+                gruposDB[claveLimpia].periodos[periodoActivoKey][claveSesion] = {};
+            }
+
+            let paqueteDrive = [];
+
+            estudiantes.forEach((estudiante, idx) => {
+                const radioElem = document.querySelector(`input[name="status_${idx}"]:checked`);
+                const estado = radioElem ? radioElem.value : 'Presente';
+
+                gruposDB[claveLimpia].periodos[periodoActivoKey][claveSesion][estudiante] = {
+                    estado: estado,
+                    horas: Number(horas)
+                };
+
+                paqueteDrive.push({ estudiante: estudiante, estado: estado });
+            });
+
+            localStorage.setItem('sia_grupos_db', JSON.stringify(gruposDB));
+
+            enviarADrive(claveLimpia, fecha, asignatura, usuarioActual, paqueteDrive, function() {
+                alert(`¡Asistencia de ${asignatura} (${claveLimpia}) guardada por ${usuarioActual} con éxito!`);
+                renderizarTablaAsistencia();
+            });
+        }
+
+        function enviarADrive(curso, fecha, asignatura, docenteNombre, registros, callback) {
+            const paquete = {
+                curso: curso,
+                fecha: fecha,
+                asignatura: asignatura,
+                periodo: periodoActivoKey,
+                usuario: docenteNombre,
+                registros: registros
+            };
+
+            let iframeName = 'iframe_drive_' + new Date().getTime();
+            let iframe = document.createElement('iframe');
+            iframe.name = iframeName;
+            iframe.style.display = 'none';
+            document.body.appendChild(iframe);
+
+            let form = document.createElement('form');
+            form.method = 'POST';
+            form.action = URL_SCRIPT_INSTITUCIONAL;
+            form.target = iframeName;
+
+            let inputPayload = document.createElement('input');
+            inputPayload.type = 'hidden';
+            inputPayload.name = 'payload';
+            inputPayload.value = JSON.stringify(paquete);
+
+            form.appendChild(inputPayload);
+            document.body.appendChild(form);
+
+            form.submit();
+
+            setTimeout(() => {
+                document.body.removeChild(form);
+                document.body.removeChild(iframe);
+                if (callback) callback();
+            }, 1500);
+        }
+
+        // EXPORTACIÓN A EXCEL COMPLETA Y DETALLADA
+        function exportarMatrizConsolidadaExcel() {
+            const claveLimpia = normalizarNombreGrupo(grupoActivoKey);
+            if (!claveLimpia || !gruposDB[claveLimpia]) {
+                alert('No hay grupo activo seleccionado.');
+                return;
+            }
+
+            const grupoObj = gruposDB[claveLimpia];
+            const matrizPeriodo = (grupoObj.periodos ? grupoObj.periodos[periodoActivoKey] : {}) || {};
+            const estudiantes = grupoObj.estudiantes || [];
+            const sesionesRegistradas = Object.keys(matrizPeriodo).sort();
+
+            const horasTotales = parseFloat(document.getElementById('horasTotales').value) || 20;
+
+            const matrizExcel = estudiantes.map((estudiante, index) => {
+                let fila = {
+                    'No.': index + 1,
+                    'Grupo': claveLimpia,
+                    'Periodo': periodoActivoKey,
+                    'Nombre Completo Estudiante': estudiante
+                };
+
+                let totalHorasFalla = 0;
+
+                sesionesRegistradas.forEach(claveSesion => {
+                    const reg = matrizPeriodo[claveSesion][estudiante];
+                    let valorEstado = 'N/A';
+                    let hrsNum = 2;
+
+                    if (reg) {
+                        valorEstado = (typeof reg === 'object') ? reg.estado : reg;
+                        hrsNum = (typeof reg === 'object') ? (reg.horas || 2) : 2;
+                    }
+
+                    fila[claveSesion] = valorEstado;
+
+                    if (valorEstado === 'Falla' || valorEstado === 'F') {
+                        totalHorasFalla += Number(hrsNum);
+                    }
+                });
+
+                fila['Total Horas Falla'] = totalHorasFalla;
+                fila['% Inasistencia Periodo'] = `${((totalHorasFalla / horasTotales) * 100).toFixed(1)}%`;
+                fila['Estado Final Periodo'] = (totalHorasFalla / horasTotales) >= 0.2 ? 'REPROBADO POR FALLAS' : 'APROBADO';
+
+                return fila;
+            });
+
+            const hoja = XLSX.utils.json_to_sheet(matrizExcel);
+            const libro = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(libro, hoja, periodoActivoKey.replace(/\s+/g, '_'));
+            XLSX.writeFile(libro, `Consolidado_${claveLimpia.replace(/\s+/g, '_')}_${periodoActivoKey.replace(/\s+/g, '_')}.xlsx`);
+        }
+    </script>
+</body>
+</html>
