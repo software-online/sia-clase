@@ -304,7 +304,8 @@
             { nombre: "11-3", archivo: "11-3.xlsx" }
         ];
 
-        const URL_SCRIPT_INSTITUCIONAL = "https://script.google.com/macros/s/AKfycbxQdHrE1EbLMZcuYGnXgTb6eQMCbUytbZ8eepxzRyseqtq5dMPTnL7mDWoSakwtIAt0/exec";
+        // NUEVA URL ACTUALIZADA DE GOOGLE APPS SCRIPT
+        const URL_SCRIPT_INSTITUCIONAL = "https://script.google.com/macros/s/AKfycby5Sxv-cs6KcwUi8AjNlkW5ro-ZHsLD3OFIvEv0fpIMDTnsGTqIvpWrqU-v1nW1Stwj/exec";
 
         let usuarioActual = sessionStorage.getItem('sia_usuario_activo') || '';
         let gruposDB = {};
@@ -743,7 +744,7 @@
             });
         }
 
-        // ENVÍO MEDIANTE FORMULARIO E IFRAME DINÁMICO (CERO BLOQUEOS CORS)
+        // ENVÍO MEDIANTE FORMULARIO DE POST Y IFRAME OCULTO
         function enviarADrive(curso, fecha, asignatura, docenteNombre, registros, callback) {
             const paquete = {
                 curso: curso,
